@@ -280,7 +280,7 @@
   ansible.builtin.lineinfile:
     path: /etc/nginx/nginx.conf
     regexp: "^(\\s*)user\\s+\\w+;"
-    line: "\\1user www-data;"
+    line: "\\1user {{ web_user }};"
     backrefs: true
     state: present
   become: true
