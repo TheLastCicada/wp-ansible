@@ -294,7 +294,7 @@
     block: |
         {% filter indent(width=4, first=true) %}
         upstream php {
-            server unix:/run/php/php-fpm.sock;
+            server unix:{{ php_fmp_pools[0].pool_listen }};
         }
         {% endfilter %}
     insertafter: "^\\s*gzip\\s+on;"
