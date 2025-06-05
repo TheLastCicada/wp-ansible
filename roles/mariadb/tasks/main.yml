@@ -1,0 +1,35 @@
+---
+- name: Add MariaDB repository key
+  apt_key:
+    url: https://mariadb.org/mariadb_release_signing_key.asc
+    state: present
+  when: ansible_os_family == "Debian"
+
+- name: Add MariaDB repository
+  apt_repository:
+    repo: "deb [arch=amd64] http://mirrors.tuna.tsinghua.edu.cn/mariadb/repo/10.11/{{ ansible_distribution | lower }} {{ ansible_distribution_release }} main"
+    state: present
+    filename: mariadb
+  when: ansible_os_family == "Debian"
+
+- name: Install MariaDB server
+  apt:
+    name: mariadb-server
+    state: present
+    update_cache: yes
+  when: ansible_os_family == "Debian"
+
+- name: Ensure MariaDB is started and enabled
+  service:
+    name: mariadb
+    state: started
+    enabled: yes
+
+- name: Copy MariaDB configuration
+  template:
+    src: mariadb.cnf.j2
+    dest: /etc/mysql/mariadb.conf.d/50-server.cnf
+    owner: root
+    group: root
+    mode: '0644'
+  notify: restart mariadb

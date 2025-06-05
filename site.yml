@@ -1,0 +1,28 @@
+---
+# Main playbook for WordPress server setup
+- name: Configure WordPress server
+  hosts: "{{ target_host }}"
+  become: true
+  gather_facts: true
+
+  vars_files:
+    - defaults/main.yml
+
+  pre_tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: true
+        cache_valid_time: 3600
+      when: ansible_os_family == "Debian"
+
+  roles:
+    - { role: common, tags: ["common"] }
+    - { role: unattended_upgrades, tags: ["security", "updates"] }
+    - { role: geerlingguy.php-versions, tags: ["php", "web"] }
+    - { role: geerlingguy.php, tags: ["php", "web"] }
+    - { role: nginxinc.nginx, tags: ["nginx", "web"] }
+    - { role: mariadb, tags: ["mysql", "database"] }
+    - { role: geerlingguy.memcached, tags: ["memcached", "cache"] }
+    - { role: geerlingguy.certbot, tags: ["certbot", "ssl", "security"] }
+    - { role: wp_cli, tags: ["wp-cli", "wordpress"] }
+    - { role: install_wordpress, tags: ["wordpress"] }

@@ -1,0 +1,45 @@
+---
+# Default variables for unattended_upgrades role
+
+# Debian/Ubuntu settings
+unattended_upgrades_origins_patterns:
+  - "origin=Debian,codename=${distro_codename},label=Debian-Security"
+  - "origin=Debian,codename=${distro_codename}-security,label=Debian-Security"
+  - "origin=Ubuntu,codename=${distro_codename},label=Ubuntu-Security"
+  - "origin=Ubuntu,codename=${distro_codename}-security,label=Ubuntu-Security"
+  - "origin=*,codename=${distro_codename}-updates"
+  - "origin=*,codename=${distro_codename}"
+
+# Enable all updates, not just security updates
+unattended_upgrades_upgrade_all: true
+
+# Automatic reboot settings
+unattended_upgrades_automatic_reboot: false
+unattended_upgrades_automatic_reboot_time: "02:00"
+
+# Email settings
+unattended_upgrades_send_email: false
+unattended_upgrades_email_to: "root"
+unattended_upgrades_email_on_error: false
+
+# Update frequency (1=daily)
+unattended_upgrades_update_interval: 7
+
+# Remove unused dependencies
+unattended_upgrades_remove_unused_dependencies: true
+
+# Remove unused kernel packages
+unattended_upgrades_remove_unused_kernel_packages: true
+
+# Package blacklist
+unattended_upgrades_package_blacklist: []
+
+# RHEL/CentOS Settings
+yum_automatic_install_updates: true
+yum_automatic_download_updates: true
+yum_update_security: true
+yum_update_all: true
+yum_randomize_hours: 4
+yum_email_to: "root"
+yum_email_host: "localhost"
+yum_email_on_apply: true

@@ -1,0 +1,123 @@
+---
+# Variables for all hosts
+
+# System configuration
+system_timezone: "America/Los_Angeles"
+ansible_python_interpreter: auto
+
+# Web server user/group
+web_user: "www-data"
+web_group: "www-data"
+
+# Common packages
+additional_packages: [] # Add any extra packages here
+
+# PHP settings
+php_version: "8.2"
+php_packages:
+  - php{{ php_version }}-common
+  - php{{ php_version }}-curl
+  - php{{ php_version }}-cli
+  - php{{ php_version }}-fpm
+  - php{{ php_version }}-igbinary
+  - php{{ php_version }}-imagick
+  - php{{ php_version }}-gd
+  - php{{ php_version }}-mbstring
+  - php{{ php_version }}-xml
+  - php{{ php_version }}-zip
+  - php{{ php_version }}-imagick
+  - php{{ php_version }}-mysql
+  - php{{ php_version }}-intl
+  - php{{ php_version }}-bcmath
+  - php{{ php_version }}-memcached
+  - php{{ php_version }}-memcache
+  - php{{ php_version }}-msgpack
+  - php{{ php_version }}-opcache
+  - php{{ php_version }}-readline
+  - php{{ php_version }}-xml
+  - php{{ php_version }}-zip
+
+php_user: "{{ web_user }}"
+php_group: "{{ web_group }}"
+
+php_webserver_daemon: nginx
+
+php_enable_php_fpm: true
+php_fpm_state: started
+php_fpm_enabled_on_boot: true
+
+php_fpm_pools:
+  - pool_name: www
+    pool_template: www.conf.j2
+    pool_listen: "/run/php/php-fpm.sock"
+    pool_listen_allowed_clients: "127.0.0.1"
+    pool_pm: static
+    pool_pm_max_children: 4
+    pool_pm_max_requests: 500
+    pool_pm_status_path: /status
+    pool_pm_start_servers: 2
+    pool_pm_min_spare_servers: 1
+
+php_use_managed_ini: true
+
+php_fpm_pool_user: "{{ web_user }}" # default varies by OS
+php_fpm_pool_group: "{{ web_user }}" # default varies by OS
+php_memory_limit: "512M"
+php_max_execution_time: "60"
+php_max_input_time: "60"
+php_max_input_vars: "1000"
+php_realpath_cache_size: "32K"
+php_file_uploads: "On"
+php_upload_max_filesize: "64M"
+php_max_file_uploads: "20"
+php_post_max_size: "32M"
+php_date_timezone: "{{ system_timezone }}"
+php_short_open_tag: false
+php_display_errors: "Off"
+php_display_startup_errors: "Off"
+php_expose_php: "Off"
+
+php_opcache_zend_extension: "opcache.so"
+php_opcache_enable: "1"
+php_opcache_enable_cli: "0"
+php_opcache_memory_consumption: "128"
+php_opcache_max_accelerated_files: "4096"
+php_opcache_validate_timestamps: "1"
+php_opcache_revalidate_path: "0"
+php_opcache_revalidate_freq: "2"
+
+php_enable_apc: false
+
+# MySQL settings
+mysql_packages:
+  - mariadb-client
+  - mariadb-server
+  - python-mysqldb
+
+mysql_enabled_on_startup: true
+
+mysql_root_password: "change_this_password" # Better to use ansible-vault
+# Nginx settings
+nginx_setup_license: false
+
+# Certbot settings
+certbot_generate_certs: false # set to true to create certs
+
+certbot_install_method: package
+certbot_auto_renew: false
+certbot_create_if_missing: true
+certbot_create_method: webroot
+certbot_admin_email: "{{ lookup('env', 'ADMIN_EMAIL') }}"
+
+# Memcached settings
+memcached_memory_limit: 16
+memcached_listen_ip: 127.0.0.1
+
+# Web server directory settings
+www_root: "/var/www/html"
+www_owner: "{{ web_user }}"
+www_group: "{{ web_group }}"
+www_mode: "0755"
+
+# Fix ansible issue
+galaxy_server_dir: /usr/local/bin

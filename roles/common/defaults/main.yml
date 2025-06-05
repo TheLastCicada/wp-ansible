@@ -1,0 +1,42 @@
+---
+# Default variables for common role
+common_packages:
+  - vim
+  - wget
+  - curl
+  - btop
+  - jq
+  - dnsutils
+  - git
+  - htop
+  - net-tools
+  - unzip
+  - zip
+  - lsof
+  - rsync
+  - screen
+  - tmux
+  - python3-pymysql
+
+# For RHEL/CentOS systems
+common_packages_rhel:
+  - vim-enhanced
+  - wget
+  - curl
+  - jq
+  - bind-utils
+  - git
+  - htop
+  - net-tools
+  - unzip
+  - zip
+  - lsof
+  - rsync
+  - screen
+  - tmux
+
+# Vim configuration
+configure_vim: true
+
+# Default timezone
+system_timezone: "UTC"

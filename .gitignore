@@ -1,0 +1,59 @@
+# Ansible WordPress Project .gitignore
+
+# Ignore Ansible retry files
+*.retry
+
+# Ignore .vault_pass
+.vault_pass
+.vault-pass
+.vault_password
+.vault-password
+
+# Ignore generated files
+*.pyc
+*.pyo
+__pycache__/
+
+# Ignore host-specific configs except examples
+host_vars/*
+!host_vars/default.yml
+!host_vars/web1.example.com.yml
+!host_vars/example-site.yml
+inventory/hosts
+
+# Ignore vault files except examples
+vault/*
+!vault/example-vault.yml
+
+# Ignore temporary files
+*~
+.*.swp
+.*.swo
+
+# Ignore logs
+*.log
+logs/
+
+# IDE files
+.idea/
+.vscode/
+*.sublime-*
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Ignore downloaded roles
+roles/geerlingguy.*
+roles/nginx.*
+
+# Ignore sensitive data files
+*.pem
+*.key
+*.crt
+*.secret

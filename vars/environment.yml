@@ -1,0 +1,128 @@
+---
+# Environment specific variables
+# This file contains variables that can be used to customize deployments across different environments
+# Default environment is development
+
+# Environment type: development, staging, or production
+environment: development
+
+# Application deployment settings
+app_debug: "{{ environment == 'development' }}"
+app_cache: "{{ environment != 'development' }}"
+
+# PHP settings by environment
+php_settings:
+  development:
+    memory_limit: "256M"
+    display_errors: "On"
+    display_startup_errors: "On"
+    error_reporting: "E_ALL"
+    opcache_validate_timestamps: "1"
+    max_execution_time: "300"
+  
+  staging:
+    memory_limit: "384M"
+    display_errors: "Off"
+    display_startup_errors: "Off"
+    error_reporting: "E_ALL & ~E_DEPRECATED & ~E_STRICT"
+    opcache_validate_timestamps: "0"
+    max_execution_time: "300"
+  
+  production:
+    memory_limit: "512M"
+    display_errors: "Off"
+    display_startup_errors: "Off"
+    error_reporting: "E_ALL & ~E_DEPRECATED & ~E_STRICT"
+    opcache_validate_timestamps: "0"
+    max_execution_time: "600"
+
+# Database settings by environment
+db_settings:
+  development:
+    wait_timeout: 28800
+    innodb_buffer_pool_size: "256M"
+    query_cache_size: "32M"
+  
+  staging:
+    wait_timeout: 600
+    innodb_buffer_pool_size: "512M"
+    query_cache_size: "64M"
+  
+  production:
+    wait_timeout: 120
+    innodb_buffer_pool_size: "1G"
+    query_cache_size: "128M"
+
+# Nginx settings by environment
+nginx_settings:
+  development:
+    worker_processes: 2
+    worker_connections: 1024
+    keepalive_timeout: 65
+    client_max_body_size: "64m"
+  
+  staging:
+    worker_processes: "auto"
+    worker_connections: 2048
+    keepalive_timeout: 65
+    client_max_body_size: "64m"
+  
+  production:
+    worker_processes: "auto"
+    worker_connections: 4096
+    keepalive_timeout: 30
+    client_max_body_size: "128m"
+
+# WordPress settings by environment
+wordpress_settings:
+  development:
+    wp_debug: true
+    wp_debug_log: true
+    wp_debug_display: true
+    disallow_file_mods: false
+    autosave_interval: 60
+    wp_auto_update_core: false
+  
+  staging:
+    wp_debug: false
+    wp_debug_log: true
+    wp_debug_display: false
+    disallow_file_mods: false
+    autosave_interval: 60
+    wp_auto_update_core: minor
+  
+  production:
+    wp_debug: false
+    wp_debug_log: false
+    wp_debug_display: false
+    disallow_file_mods: true
+    autosave_interval: 180
+    wp_auto_update_core: minor
+
+# Current environment settings (accessible via dot notation in templates)
+current_env: "{{ environment }}"
+current_php: "{{ php_settings[environment] }}"
+current_db: "{{ db_settings[environment] }}"
+current_nginx: "{{ nginx_settings[environment] }}"
+current_wordpress: "{{ wordpress_settings[environment] }}"
+
+# Backup settings by environment
+backup_settings:
+  development:
+    enabled: false
+    frequency: "weekly"
+    retention: 2
+  
+  staging:
+    enabled: true
+    frequency: "daily"
+    retention: 7
+  
+  production:
+    enabled: true
+    frequency: "daily"
+    retention: 30
+    offsite: true
+
+# Current backup settings
+current_backup: "{{ backup_settings[environment] }}"

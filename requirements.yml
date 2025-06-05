@@ -1,0 +1,15 @@
+---
+# External Ansible roles requirements file
+# Install with: ansible-galaxy install -r requirements.yml
+
+roles:
+  - name: nginxinc.nginx
+
+  - name: geerlingguy.php
+
+  - name: geerlingguy.php-versions
+    src: https://github.com/geerlingguy/ansible-role-php-versions
+
+  - name: geerlingguy.memcached
+
+  - name: geerlingguy.certbot

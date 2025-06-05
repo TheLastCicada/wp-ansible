@@ -1,0 +1,47 @@
+---
+# Default variables for wp_cli role
+
+# PHP requirements for WP-CLI
+php_packages:
+  - php-cli
+  - php-curl
+  - php-xml
+  - php-mbstring
+
+# WP-CLI version and download URL
+wp_cli_phar_url: "https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar"
+wp_cli_completion_url: "https://raw.githubusercontent.com/wp-cli/wp-cli/main/utils/wp-completion.bash"
+
+# Installation paths
+wp_cli_bin_path: "/usr/local/bin/wp"
+wp_cli_symlink_to_local_bin: true
+
+# WP-CLI configuration
+wp_cli_create_config: true
+wp_cli_config_dir: "~/.wp-cli"      # Will be expanded using the connecting user's home dir
+wp_cli_config_path: "~/.wp-cli/config.yml"
+wp_cli_user: "{{ ansible_user_id }}"  # User who will own the config file
+
+# Updates
+wp_cli_force_update: false  # Set to true to always update to latest version
+wp_cli_auto_update: true    # Enable automatic updates via cron   # Hour of the day to run updates (0-23)
+wp_cli_update_minute: "{{ ['5','10','15','20','25','30','35','40','45','50','55'] | random }}" # Minute of the hour to run updates (0-59)
+wp_cli_update_user: "{{ wp_cli_user }}"  # User to run the update as
+
+# Additional settings
+wp_cli_add_bash_completion: true
+
+# Default cache directory for WP-CLI
+wp_cli_cache_dir: "{{ ansible_env.HOME | default('~') }}/.wp-cli/cache"
+
+# Whether to configure path for specific WordPress instances
+wp_cli_configure_paths: false
+
+# WordPress instances (used if wp_cli_configure_paths is true)
+wp_cli_wordpress_paths: []
+# Example:
+# wp_cli_wordpress_paths:
+#   - alias: "site1"
+#     path: "/var/www/site1"
+#   - alias: "site2"
+#     path: "/var/www/site2"

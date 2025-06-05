@@ -1,0 +1,113 @@
+---
+# Tasks for wp-cli role
+- name: Install non-PHP prerequisites for WP-CLI
+  apt:
+    name:
+      - curl
+      - less
+    state: present
+  when: ansible_os_family == "Debian"
+
+- name: Install non-PHP prerequisites for WP-CLI (RHEL/CentOS)
+  yum:
+    name:
+      - curl
+      - less
+    state: present
+  when: ansible_os_family == "RedHat"
+
+- name: Verify PHP is installed and available
+  command: php -v
+  register: php_check
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Fail if PHP is not available
+  fail:
+    msg: "PHP is required for WP-CLI but was not found. Ensure the PHP role (geerlingguy.php) is properly included as a dependency."
+  when: php_check.rc != 0
+
+- name: Check if wp-cli exists
+  stat:
+    path: "{{ wp_cli_bin_path }}"
+  register: wp_cli_stat
+
+- name: Download WP-CLI
+  get_url:
+    url: "{{ wp_cli_phar_url }}"
+    dest: "{{ wp_cli_bin_path }}"
+    mode: 0755
+    force: "{{ wp_cli_force_update }}"
+  when: not wp_cli_stat.stat.exists or wp_cli_force_update
+  become: true
+
+- name: Get remote user home directory
+  shell: echo $HOME
+  register: remote_user_home
+  changed_when: false
+  when: wp_cli_create_config
+
+- name: Add bash completion for WP-CLI
+  get_url:
+    url: "{{ wp_cli_completion_url }}"
+    dest: /etc/bash_completion.d/wp-cli
+    mode: 0644
+  when: wp_cli_add_bash_completion and ansible_facts['os_family'] == 'Debian'
+  ignore_errors: true
+
+- name: Get root's current shell
+  ansible.builtin.shell: | # Use 'shell' module as it's reliable for shell environment variables
+    echo $SHELL
+  register: root_shell_cmd_result
+  changed_when: false # This command doesn't change system state
+  become: true # IMPORTANT: Run this command as root to get root's shell
+
+- name: Determine root's shell configuration file based on command output
+  ansible.builtin.set_fact:
+    # Trim whitespace (like a newline) from the command output
+    root_shell_path: "{{ root_shell_cmd_result.stdout | trim }}"
+    root_shell_config_file: |
+      {% if (root_shell_cmd_result.stdout | trim) == '/bin/bash' %}
+      /root/.bashrc
+      {% elif (root_shell_cmd_result.stdout | trim) == '/bin/zsh' %}
+      /root/.zshrc
+      {% else %}
+      /root/.profile
+      {% endif %}
+
+- name: Debug detected root shell and target config file
+  ansible.builtin.debug:
+    msg: "Root's detected shell: {{ root_shell_path }}. Targeting config file: {{ root_shell_config_file }}"
+
+- name: Add or ensure 'wp' alias for the root user
+  ansible.builtin.lineinfile:
+    path: "{{ root_shell_config_file }}" # Use the dynamically determined path
+    line: "alias wp='wp --allow-root'"
+    regexp: "^alias\\s+wp=.*" # Regex to match existing 'wp' alias
+    state: present # Ensure the line is present
+    create: true # Create the file if it doesn't exist
+    owner: "root" # Owner must be root
+    group: "root" # Group must be root
+    mode: '0644' # Standard permissions for config files
+  become: true # IMPORTANT: Run this task as the root user
+
+- name: Copy WP-CLI update test script
+  copy:
+    src: wp-cli-update-test.sh
+    dest: "/usr/local/bin/wp-cli-update-test.sh"
+    owner: "{{ wp_cli_update_user }}"
+    mode: 0755
+  when: wp_cli_auto_update
+
+- name: Add WP-CLI auto-update cron job
+  cron:
+    name: "WP-CLI auto-update"
+    user: "{{ wp_cli_update_user }}"
+    minute: "{{ wp_cli_update_minute }}"
+    hour: "3"
+    day: "*"
+    month: "*"
+    weekday: "1"
+    job: "wp cli update --yes > /dev/null 2>&1"
+  when: wp_cli_auto_update

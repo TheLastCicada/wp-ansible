@@ -1,0 +1,17 @@
+---
+# Handlers for wp-cli role
+
+- name: Check WP-CLI version
+  command: wp cli version
+  register: wp_cli_version
+  changed_when: false
+  ignore_errors: true
+  become: "{{ wp_cli_user != ansible_user_id and wp_cli_user != 'root' }}"
+  become_user: "{{ wp_cli_user }}"
+
+- name: Update WP-CLI
+  command: wp cli update --yes
+  when: wp_cli_auto_update
+  become: "{{ wp_cli_user != ansible_user_id and wp_cli_user != 'root' }}"
+  become_user: "{{ wp_cli_user }}"
+  ignore_errors: true

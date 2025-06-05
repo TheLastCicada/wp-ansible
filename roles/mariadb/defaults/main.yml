@@ -1,0 +1,13 @@
+---
+# MariaDB Configuration Variables
+mariadb_tmp_table_size: 8M
+mariadb_max_heap_table_size: 8M
+mariadb_innodb_log_file_size: 16M
+mariadb_innodb_buffer_pool_size: 64M
+mariadb_max_connections: 8
+mariadb_table_cache: 64
+mariadb_key_buffer_size: 64k
+mariadb_max_allowed_packet: 1G
+mariadb_thread_stack: 64kK
+mariadb_thread_cache_size: 8
+mariadb_innodb_log_buffer_size: 16M

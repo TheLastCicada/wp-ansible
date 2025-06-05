@@ -1,0 +1,90 @@
+# Domain configuration
+www_root_base: /var/www/
+
+# WP Site configuration variables
+wp_sites:
+  - name: example.com
+    www_root: "{{ www_root_base }}example.com"
+    wp_debug: false
+    wp_debug_log: false
+    wp_debug_display: false
+    wp_auto_update_core: true
+    disallow_file_mods: false
+    disallow_file_edits: true
+    wp_cache: true
+    wp_db_name: example_com
+    wp_db_user: example_com
+    wp_db_password: "{{ lookup('env', 'WP_DB_PASSWORD_EXAMPLE_COM') }}"
+    wp_db_host: localhost
+    wp_table_prefix: wp_
+    wp_title: "Test Site Title"
+    wp_admin_user: "{{ lookup('env', 'ADMIN_USER') }}"
+    wp_admin_email: "{{ lookup('env', 'ADMIN_EMAIL') }}"
+    wp_admin_password: "{{ lookup('env', 'ADMIN_PASSWORD') }}"
+    wp_environment_type: "production"
+    wp_cache_key_salt: "example.com-production"
+    wp_microcache_time: 10 # seconds
+    certbot_generate_certs: false
+    nginx_default_server: true
+    nginx_disable_robots: true
+    nginx_enable_cloudflare: false
+    nginx_enable_multisite: false
+    extra_domains:
+      - www.example.com
+    wp_additional_plugins:
+     - name: batcache
+       activate: true
+     - name: memcached
+       activate: false
+     - name: dynamic-asset-versioning
+       activate: true
+     - name: redirection
+       activate: true
+     - name: limit-login-attempts-reloaded
+       activate: true
+    wp_additional_config_options: []
+  - name: stage-example.com
+    www_root: "{{ www_root_base }}stage-example.com"
+    wp_debug: true
+    wp_debug_log: false
+    wp_debug_display: false
+    wp_auto_update_core: true
+    disallow_file_mods: false
+    disallow_file_edits: true
+    wp_cache: true
+    wp_db_name: stage_example_com
+    wp_db_user: stage_example_com
+    wp_db_password: "{{ lookup('env', 'WP_DB_PASSWORD_STAGE_EXAMPLE_COM') }}"
+    wp_db_host: localhost
+    wp_table_prefix: wp_
+    wp_title: "Staging Test Site Title"
+    wp_admin_user: "{{ lookup('env', 'ADMIN_USER') }}"
+    wp_admin_email: "{{ lookup('env', 'ADMIN_EMAIL') }}"
+    wp_admin_password: "{{ lookup('env', 'ADMIN_PASSWORD') }}"
+    wp_environment_type: "staging"
+    wp_cache_key_salt: "stage-example.com-staging"
+    wp_microcache_time: 10 # seconds
+    nginx_disable_robots: true
+    nginx_enable_cloudflare: true
+    nginx_enable_multisite: false
+    extra_domains: []
+    certbot_generate_certs: false
+    nginx_default_server: false
+    wp_additional_plugins:
+     - name: batcache
+       activate: true
+     - name: memcached
+       activate: false
+     - name: dynamic-asset-versioning
+       activate: true
+     - name: redirection
+       activate: true
+     - name: limit-login-attempts-reloaded
+       activate: true
+     - name: contextual-adminbar-color
+       activate: true
+    wp_additional_config_options:
+      - name: CONTEXTUAL_ADMINBAR_MESSAGE
+        value: STAGING
+      - name: CONTEXTUAL_ADMINBAR_COLOR
+        value: red

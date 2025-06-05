@@ -1,0 +1,61 @@
+// Unattended-Upgrades configuration file
+// {{ ansible_managed }}
+
+// Enable the update/upgrade script (0=disable)
+APT::Periodic::Enable "1";
+
+// Do "apt-get update" automatically every n-days (0=disable)
+APT::Periodic::Update-Package-Lists "{{ unattended_upgrades_update_interval }}";
+
+// Do "apt-get upgrade --download-only" every n-days (0=disable)
+APT::Periodic::Download-Upgradeable-Packages "{{ unattended_upgrades_update_interval }}";
+
+// Run the "unattended-upgrade" security upgrade script every n-days (0=disabled)
+APT::Periodic::Unattended-Upgrade "{{ unattended_upgrades_update_interval }}";
+
+// Do "apt-get autoclean" every n-days (0=disable)
+APT::Periodic::AutocleanInterval "30";
+
+// Send report mail to root (optional)
+//APT::Periodic::Verbose "2";
+
+Unattended-Upgrade::Allowed-Origins {
+{% for origin in unattended_upgrades_origins_patterns %}
+    "{{ origin }}";
+{% endfor %}
+{% if unattended_upgrades_upgrade_all %}
+    // Enable all updates, not just security updates
+    "origin=*,archive=*,label=*";
+{% endif %}
+};
+
+// List of packages to not update (regexp are supported)
+Unattended-Upgrade::Package-Blacklist {
+{% for package in unattended_upgrades_package_blacklist %}
+    "{{ package }}";
+{% endfor %}
+};
+
+// This option controls whether or not the system will automatically reboot
+// if there are pending kernel updates
+Unattended-Upgrade::Automatic-Reboot "{{ unattended_upgrades_automatic_reboot|lower }}";
+Unattended-Upgrade::Automatic-Reboot-Time "{{ unattended_upgrades_automatic_reboot_time }}";
+
+// Remove unused dependencies
+Unattended-Upgrade::Remove-Unused-Dependencies "{{ unattended_upgrades_remove_unused_dependencies|lower }}";
+
+// Remove unused kernel packages
+Unattended-Upgrade::Remove-Unused-Kernel-Packages "{{ unattended_upgrades_remove_unused_kernel_packages|lower }}";
+
+// Email settings
+Unattended-Upgrade::Mail "{% if unattended_upgrades_send_email %}{{ unattended_upgrades_email_to }}{% else %}null{% endif %}";
+Unattended-Upgrade::MailOnlyOnError "{{ unattended_upgrades_email_on_error|lower }}";
+
+// Automatically fix interrupted dpkg
+Unattended-Upgrade::AutoFixInterruptedDpkg "true";
+
+// Split the upgrade into the smallest possible chunks
+Unattended-Upgrade::MinimalSteps "true";
+
+// Install all updates when the machine is shutting down
+Unattended-Upgrade::InstallOnShutdown "false";

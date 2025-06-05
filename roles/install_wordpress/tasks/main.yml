@@ -1,0 +1,333 @@
+---
+# WordPress installation playbook
+
+- name: Check if WordPress is already installed for each site
+  stat:
+    path: "{{ item.www_root }}/wp-config.php"
+  register: wp_config_exists
+  loop: "{{ wp_sites }}"
+  tags: always
+
+- name: Create WordPress databases
+  mysql_db:
+    name: "{{ item.wp_db_name }}"
+    state: present
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+    login_user: root
+  loop: "{{ wp_sites }}"
+  loop_control:
+    index_var: loop_index
+  become: true
+#  no_log: true
+  when: not wp_config_exists.results[loop_index].stat.exists
+
+- name: Create WordPress database users
+  mysql_user:
+    name: "{{ item.wp_db_user }}"
+    password: "{{ item.wp_db_password }}"
+    priv: "{{ item.wp_db_name }}.*:ALL"
+    host: localhost
+    state: present
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+    login_user: root
+  loop: "{{ wp_sites }}"
+  loop_control:
+    index_var: loop_index
+  become: true
+#  no_log: true
+  when: not wp_config_exists.results[loop_index].stat.exists
+
+- name: Ensure WordPress webroot directory exists for each domain
+  file:
+    path: "{{ item.www_root }}"
+    state: directory
+    mode: '0755'
+    owner: "{{ web_user }}"
+    group: "{{ web_group }}"
+  loop: "{{ wp_sites }}"
+  loop_control:
+    index_var: loop_index
+  when: not wp_config_exists.results[loop_index].stat.exists
+
+- name: Download WordPress for each site
+  command: >
+    wp core download
+    --path={{ item.www_root }}
+    --allow-root
+  args:
+    creates: "{{ item.www_root }}/wp-load.php"
+  become: true
+  loop: "{{ wp_sites }}"
+  loop_control:
+    index_var: loop_index
+  when: not wp_config_exists.results[loop_index].stat.exists
+
+- name: Create WordPress configuration file for each site
+  command: >
+    wp config create
+    --path={{ item.www_root }}
+    --dbname={{ item.wp_db_name }}
+    --dbuser={{ item.wp_db_user }}
+    --dbpass={{ item.wp_db_password }}
+    --dbhost={{ item.wp_db_host }}
+    --dbprefix={{ item.wp_table_prefix }}
+    --allow-root
+    --extra-php
+  args:
+    stdin: |
+      define('WP_DEBUG', {{ item.wp_debug | lower }});
+      define('WP_DEBUG_LOG', {{ item.wp_debug_log | lower }});
+      define('WP_DEBUG_DISPLAY', {{ item.wp_debug_display | lower }});
+      define('WP_AUTO_UPDATE_CORE', '{{ item.wp_auto_update_core }}');
+      define('DISALLOW_FILE_MODS', {{ item.disallow_file_mods | lower }});
+      define('DISALLOW_FILE_EDITS', {{ item.disallow_file_edits | lower }});
+      define('WP_CACHE', {{ item.wp_cache | lower }});
+      define('WP_ENVIRONMENT_TYPE', '{{ item.wp_environment_type }}');
+  loop: "{{ wp_sites }}"
+  loop_control:
+    index_var: loop_index
+  when: not wp_config_exists.results[loop_index].stat.exists
+#  no_log: true
+
+- name: Set additional WordPress configuration options
+  command: >
+    wp config set {{ config_item.name }} {{ config_item.value | string | quote }}
+    --path={{ site_item.www_root }}
+    --allow-root
+  become: true
+  loop: "{{ wp_sites | subelements('wp_additional_config_options') }}"
+  loop_control:
+    label: "{{ item.0.name }} - {{ item.1.name }}"
+  vars:
+    site_item: "{{ item.0 }}" # item.0 refers to the site dictionary
+    config_item: "{{ item.1 }}" # item.1 refers to the config dictionary
+  when:
+    # Only run if wp_additional_config_options is defined and not empty
+    - site_item.wp_additional_config_options is defined and site_item.wp_additional_config_options | length > 0
+    # Only run during initial install (when wp-config.php didn't exist initially)
+    - (wp_config_exists.results | selectattr('item.name', 'equalto', site_item.name) | first).stat.exists == false
+
+- name: Install WordPress for each site
+  command: >
+    wp core install
+    --path={{ item.www_root }}
+    --url={{ item.name }}
+    --title="{{ item.wp_title }}"
+    --admin_user={{ item.wp_admin_user }}
+    --admin_password={{ item.wp_admin_password }}
+    --admin_email={{ item.wp_admin_email }}
+    --allow-root
+  become: true
+  loop: "{{ wp_sites }}"
+  loop_control:
+    index_var: loop_index
+  when: not wp_config_exists.results[loop_index].stat.exists
+
+- name: Update WordPress plugins for each site
+  command: wp plugin update --all --path={{ item.www_root }} --allow-root
+  become: true
+  loop: "{{ wp_sites }}"
+  loop_control:
+    index_var: loop_index
+  when: not wp_config_exists.results[loop_index].stat.exists
+  tags: ['update']
+
+- name: Install WordPress plugins for each site
+  command: >
+    wp plugin install {{ plugin_item.name }}{% if plugin_item.activate %} --activate{% endif %} --path={{ site_item.www_root }} --allow-root
+  become: true
+  loop: "{{ wp_sites | subelements('wp_additional_plugins') }}"
+  loop_control:
+    label: "{{ item.0.name }} - {{ item.1.name }}"
+  vars:
+    site_item: "{{ item.0 }}" # item.0 refers to the site dictionary
+    plugin_item: "{{ item.1 }}" # item.1 refers to the plugin dictionary
+  when:
+    # Ensure there are plugins for the site
+    - site_item.wp_additional_plugins is defined and site_item.wp_additional_plugins | length > 0
+    # Find the matching stat result using the site_item.name
+    - (wp_config_exists.results | selectattr('item.name', 'equalto', site_item.name) | first).stat.exists == false
+
+- name: Delete hello plugin for each site
+  command: wp plugin delete hello --path={{ item.www_root }} --allow-root
+  become: true
+  loop: "{{ wp_sites }}"
+  loop_control:
+    index_var: loop_index
+  when: not wp_config_exists.results[loop_index].stat.exists
+
+- name: Ensure correct file permissions for each site
+  file:
+    path: "{{ item.www_root }}"
+    owner: "{{ web_user }}"
+    group: "{{ web_group }}"
+    mode: '0755'
+    recurse: true
+  loop: "{{ wp_sites }}"
+  loop_control:
+    index_var: loop_index
+
+- name: Set strict permissions on wp-config.php for each site
+  file:
+    path: "{{ item.www_root }}/wp-config.php"
+    owner: "{{ web_user }}"
+    group: "{{ web_group }}"
+    mode: '0400'
+  loop: "{{ wp_sites }}"
+  loop_control:
+    index_var: loop_index
+  when: wp_config_exists.results[loop_index].stat.exists
+
+- name: Symlink advanced-cache.php for each site
+  file:
+    src: "{{ item.www_root }}/wp-content/plugins/batcache/advanced-cache.php"
+    dest: "{{ item.www_root }}/wp-content/advanced-cache.php"
+    state: link
+  loop: "{{ wp_sites }}"
+  loop_control:
+    index_var: loop_index
+  when: not wp_config_exists.results[loop_index].stat.exists
+
+- name: Symlink object-cache.php for each site
+  file:
+    src: "{{ item.www_root }}/wp-content/plugins/memcached/object-cache.php"
+    dest: "{{ item.www_root }}/wp-content/object-cache.php"
+    state: link
+  loop: "{{ wp_sites }}"
+  loop_control:
+    index_var: loop_index
+  when: not wp_config_exists.results[loop_index].stat.exists
+
+- name: Download nginx include files
+  git:
+    repo: https://github.com/TheLastCicada/nginx_configs.git
+    dest: /etc/nginx/nginx_configs
+    version: master
+    force: true
+  become: true
+  notify: (Handler) Run NGINX
+
+- name: Upload nginx http redirects template
+  template:
+    src: nginx-http-redirects.conf
+    dest: /etc/nginx/conf.d/{{ item.name }}-http-redirects.conf
+  loop: "{{ wp_sites }}"
+  when: wp_sites is defined
+  notify: (Handler) Run NGINX
+
+- name: Check if dhparam file exists
+  stat:
+    path: /etc/nginx/dhparam.pem
+  register: dhparam_file
+  become: true
+
+- name: Create dhparam file - could take a while!
+  command: >
+    openssl dhparam -out /etc/nginx/dhparam.pem 4096
+  become: true
+  when: not dhparam_file.stat.exists
+  notify: (Handler) Run NGINX
+
+- name: Build certbot_certs list for sites that need certificates
+  set_fact:
+    certbot_certs: >-
+      {{
+        certbot_certs | default([]) + [{
+          'domains': [site.name] + (site.extra_domains | default([])),
+          'webroot': site.www_root
+        }]
+      }}
+  loop: "{{ wp_sites | selectattr('certbot_generate_certs', 'equalto', true) | list }}"
+  loop_control:
+    loop_var: site
+  when: wp_sites is defined
+
+- name: Set up certbot for sites that need it
+  include_role:
+    name: geerlingguy.certbot
+  when:
+    - wp_sites is defined
+    - certbot_certs is defined
+    - certbot_certs | length > 0
+
+- name: Upload nginx https redirects template
+  template:
+    src: nginx-https-redirects.conf
+    dest: /etc/nginx/conf.d/{{ item.name }}-https-redirects.conf
+  loop: "{{ wp_sites }}"
+  when: wp_sites is defined and item.extra_domains | length > 0
+  notify: (Handler) Run NGINX
+
+- name: Upload nginx site template
+  template:
+    src: nginx-site.conf
+    dest: /etc/nginx/conf.d/{{ item.name }}.conf
+  loop: "{{ wp_sites }}"
+  when: wp_sites is defined
+  notify: (Handler) Run NGINX
+
+- name: Ensure gzip compression is uncommented in nginx.conf
+  ansible.builtin.lineinfile:
+    path: /etc/nginx/nginx.conf
+    regexp: "^(\\s*)#\\s*gzip\\s+on;"
+    line: "\\1gzip on;"
+    backrefs: true
+    state: present
+  become: true
+  notify: (Handler) Run NGINX
+
+- name: Ensure Nginx user is www-data to match php-fpm
+  ansible.builtin.lineinfile:
+    path: /etc/nginx/nginx.conf
+    regexp: "^(\\s*)user\\s+\\w+;"
+    line: "\\1user www-data;"
+    backrefs: true
+    state: present
+  become: true
+  notify: (Handler) Run NGINX
+
+- name: Add php upstream to nginx.conf
+  ansible.builtin.blockinfile:
+    path: /etc/nginx/nginx.conf
+    prepend_newline: true
+    marker: "    # {mark} ANSIBLE MANAGED BLOCK FOR PHP UPSTREAM"
+    block: |
+        {% filter indent(width=4, first=true) %}
+        upstream php {
+            server unix:/run/php/php-fpm.sock;
+        }
+        {% endfilter %}
+    insertafter: "^\\s*gzip\\s+on;"
+    state: present
+  become: true
+  notify: (Handler) Run NGINX
+
+- name: Set types_has_max_size in nginx.conf
+  lineinfile:
+    path: /etc/nginx/nginx.conf
+    regexp: "^\\s*types_hash_max_size\\s+\\d+;"
+    line: "    types_hash_max_size 2048;"
+    insertbefore: "^\\s*gzip\\s+on;"
+    state: present
+  become: true
+  notify: (Handler) Run NGINX
+
+- name: Set server_names_hash_bucket_size in nginx.conf
+  ansible.builtin.lineinfile:
+    path: /etc/nginx/nginx.conf
+    regexp: "^\\s*server_names_hash_bucket_size\\s+\\d+;"
+    line: "    server_names_hash_bucket_size 64;"
+    insertbefore: "^\\s*types_hash_max_size\\s+\\d+;"
+    state: present
+  become: true
+  notify: (Handler) Run NGINX
+
+- name: Set fastcgi_cache_path in nginx.conf
+  ansible.builtin.lineinfile:
+    path: /etc/nginx/nginx.conf
+    regexp: "^\\s*fastcgi_cache_path\\s+.*;"
+    line: "    fastcgi_cache_path /var/cache/nginx/fastcgi_cache levels=1:2 keys_zone=mysite:20m inactive=60m max_size=200m;"
+    insertbefore: "^\\s*#\\s*BEGIN ANSIBLE MANAGED BLOCK FOR PHP UPSTREAM"
+    state: present
+  become: true
+  notify: (Handler) Run NGINX

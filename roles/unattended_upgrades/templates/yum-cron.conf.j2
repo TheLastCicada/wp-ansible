@@ -1,0 +1,68 @@
+# {{ ansible_managed }}
+[commands]
+# What kind of update to use:
+# default = yum upgrade
+# security = yum --security upgrade
+# security-severity:Critical = yum --sec-severity=Critical upgrade
+# minimal = yum --bugfix update-minimal
+# minimal-security = yum --security update-minimal
+# minimal-security-severity:Critical = --sec-severity=Critical update-minimal
+update_cmd = {% if yum_update_all %}default{% else %}security{% endif %}
+
+# Whether a random number of seconds should be waited before running commands
+random_sleep = {{ yum_randomize_hours * 3600 }}
+
+# Whether updates should be downloaded when available
+download_updates = {{ yum_automatic_download_updates | lower }}
+
+# Whether updates should be applied when downloaded
+apply_updates = {{ yum_automatic_install_updates | lower }}
+
+# The maximum amount of time to randomly sleep, in seconds
+random_sleep = 360
+
+# Name of the systemd timer unit to start daily
+# Only works for "dnf-automatic-notifyonly" or 
+# "dnf-automatic-download" or "dnf-automatic-install"
+systemd_timer_notify = None
+
+[emitters]
+# Name to use for this system in messages that are emitted
+system_name = {{ ansible_hostname }}
+
+# How to send messages. Valid options are stdio, email and motd
+emit_via = {{ 'email' if yum_email_on_apply else 'stdio' }}
+
+# The width, in characters, that messages that are emitted should be formatted to
+ouput_width = 80
+
+[email]
+# The address to send email messages from
+email_from = root@{{ ansible_fqdn }}
+
+# List of addresses to send messages to
+email_to = {{ yum_email_to }}
+
+# Name of the MTA to use to send email messages
+email_host = {{ yum_email_host }}
+
+[groups]
+# List of groups to update
+group_list = None
+
+# The types of group packages to install
+group_package_types = mandatory, default
+
+[base]
+# This section overrides yum.conf
+# Use only repos defined in repos directory
+reposdir=/etc/yum.repos.d
+
+# Use delta rpms for updates
+deltarpm=true
+
+# Exclude packages from updates
+exclude=
+
+# Debug level output
+debuglevel=0

@@ -1,0 +1,78 @@
+---
+# Tasks for Unattended Upgrades role
+- name: Install unattended-upgrades package
+  apt:
+    name:
+      - unattended-upgrades
+      - apt-listchanges
+    state: present
+  when: ansible_os_family == "Debian"
+
+- name: Create unattended-upgrades configuration file
+  template:
+    src: 50unattended-upgrades.j2
+    dest: /etc/apt/apt.conf.d/50unattended-upgrades
+    owner: root
+    group: root
+    mode: 0644
+  when: ansible_os_family == "Debian"
+
+- name: Create auto-upgrades configuration file
+  template:
+    src: 20auto-upgrades.j2
+    dest: /etc/apt/apt.conf.d/20auto-upgrades
+    owner: root
+    group: root
+    mode: 0644
+  when: ansible_os_family == "Debian"
+
+- name: Enable unattended-upgrades service
+  service:
+    name: unattended-upgrades
+    state: started
+    enabled: true
+  when: ansible_os_family == "Debian"
+
+- name: Install dnf-automatic (RHEL/CentOS)
+  yum:
+    name: dnf-automatic
+    state: present
+  when: ansible_os_family == "RedHat" and ansible_distribution_major_version|int >= 8
+
+- name: Install yum-cron (older RHEL/CentOS)
+  yum:
+    name: yum-cron
+    state: present
+  when: ansible_os_family == "RedHat" and ansible_distribution_major_version|int < 8
+
+- name: Configure dnf-automatic (RHEL/CentOS 8+)
+  template:
+    src: dnf-automatic.conf.j2
+    dest: /etc/dnf/automatic.conf
+    owner: root
+    group: root
+    mode: 0644
+  when: ansible_os_family == "RedHat" and ansible_distribution_major_version|int >= 8
+
+- name: Enable and start dnf-automatic.timer (RHEL/CentOS 8+)
+  systemd:
+    name: dnf-automatic.timer
+    state: started
+    enabled: true
+  when: ansible_os_family == "RedHat" and ansible_distribution_major_version|int >= 8
+
+- name: Configure yum-cron (older RHEL/CentOS)
+  template:
+    src: yum-cron.conf.j2
+    dest: /etc/yum/yum-cron.conf
+    owner: root
+    group: root
+    mode: 0644
+  when: ansible_os_family == "RedHat" and ansible_distribution_major_version|int < 8
+
+- name: Enable and start yum-cron service (older RHEL/CentOS)
+  service:
+    name: yum-cron
+    state: started
+    enabled: true
+  when: ansible_os_family == "RedHat" and ansible_distribution_major_version|int < 8

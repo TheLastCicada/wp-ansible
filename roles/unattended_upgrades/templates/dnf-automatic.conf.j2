@@ -1,0 +1,46 @@
+# {{ ansible_managed }}
+[commands]
+#  What kind of upgrade to perform:
+# default                            = all available upgrades
+# security                           = only security upgrades
+upgrade_type = {% if yum_update_all %}default{% else %}security{% endif %}
+
+random_sleep = {{ yum_randomize_hours * 60 }}
+
+# Whether updates are downloaded when they are available, by default false
+download_updates = {{ yum_automatic_download_updates | lower }}
+
+# Whether updates are applied when they are available. Note 
+# that download_updates must also be true for the update to be applied
+apply_updates = {{ yum_automatic_install_updates | lower }}
+
+[emitters]
+emit_via = email
+
+[email]
+email_from = root@{{ ansible_fqdn }}
+email_to = {{ yum_email_to }}
+email_host = {{ yum_email_host }}
+
+[base]
+# This section overrides dnf.conf
+
+# Use only repos defined in repos directory
+reposdir=/etc/yum.repos.d,/etc/repos.d
+
+# Use delta rpms for updates
+deltarpm=true
+
+# Use the caches directory for storing metadata and packages in
+cachedir=/var/cache/dnf
+
+# Don't install weak deps
+install_weak_deps=False
+
+# Wait for internet when updating repos
+metadata_timer_sync=3600
+
+[command]
+command_email=True
+stdout_output=True
+stderr_output=True
